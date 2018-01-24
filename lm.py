@@ -91,3 +91,42 @@ class Unigram(LangModel):
     def vocab(self):
         return self.model.keys()
 
+class Trigram(LangModel):
+    def __init__(self,backoff = 0.000001):
+        self.count_3 = dict()
+        self.count_2 = dict()
+        self.voc = set()
+        self.lbackoff = log(backoff,2)
+
+    def cond_logprob(self, word, previous):
+        if word in self.voc:
+            if len(previous)<2:
+                for i in range(0,2-len(previous)):
+                    previous.insert(0,"START_OF_SENTENCE")
+            prob = self.count_3[(previous[-2],previous[-1],word)]/self.count_2[(previous[-2],previous[-1])]
+            return prob
+        else:
+            return self.lbackoff
+
+    def vocab(self):
+        return self.voc
+
+
+    def fit_sentence(self, sentence):
+        for i in range(0,len(sentence)):
+            self.voc.add(sentence[i])
+        sentence.insert(0,"START_OF_SENTENCE")
+        sentence.insert(0,"START_OF_SENTENCE")
+        sentence.append("END_OF_SENTENCE")
+
+        for i in range(0,len(sentence)-1):
+            if (sentence[i],sentence[i+1]) in self.count_2:
+                self.count_2[(sentence[i],sentence[i+1])] += 1.0
+            else:
+                self.count_2[(sentence[i],sentence[i+1])] = 1.0
+
+        for i in range(0,len(sentence)-2):
+            if (sentence[i],sentence[i+1],sentence[i+2]) in self.count_3:
+                self.count_3[(sentence[i],sentence[i+1],sentence[i+2])] += 1.0
+            else:
+                self.count_3[(sentence[i],sentence[i+1],sentence[i+2])] = 1.0
